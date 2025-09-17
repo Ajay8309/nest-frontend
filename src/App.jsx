@@ -9,6 +9,10 @@ import JobsPage from "./pages/JobsPage";
 import JobApplyPage from "./pages/JobApplyPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
 import MessagesPage from "./pages/MessagesPage";
+import EmployerCompanyPage from './pages/EmployerCompanyPage.jsx';
+import CreateJobPage from './pages/CreateJobPage.jsx';
+import EmployerJobsPage from './pages/EmployerJobsPage.jsx';
+
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -29,6 +33,9 @@ export default function App() {
           <Route path="/jobs/:id/apply" element={<PrivateRoute><JobApplyPage /></PrivateRoute>} />
           <Route path="/connections" element={<PrivateRoute><ConnectionsPage /></PrivateRoute>} />
           <Route path="/messages" element={<PrivateRoute><MessagesPage /></PrivateRoute>} />
+          <Route path="/employer/company" element={<EmployerCompanyPage />} />
+          <Route path="/employer/jobs/new" element={<CreateJobPage />} />
+          <Route path="/employer/jobs" element={<EmployerJobsPage />} />
         </Routes>
       </div>
     </Router>

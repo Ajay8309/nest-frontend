@@ -12,11 +12,13 @@ export default function LoginPage() {
     try {
       const res = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user)); // save user + role
       navigate("/jobs");
     } catch {
       alert("Invalid credentials");
     }
   };
+  
 
   return (
     <form onSubmit={handleLogin} className="col-md-4 mx-auto">

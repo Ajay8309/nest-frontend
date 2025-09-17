@@ -4,9 +4,12 @@ import { Link, useNavigate } from "react-router-dom";
 export default function Navbar() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user?.role; // 'jobseeker' or 'employer'
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 
@@ -16,7 +19,7 @@ export default function Navbar() {
         <Link className="navbar-brand" to="/">JobNest</Link>
         <div className="collapse navbar-collapse">
           <ul className="navbar-nav me-auto">
-            {token && (
+            {token && role === "job seeker" && (
               <>
                 <li className="nav-item">
                   <Link className="nav-link" to="/profile">Profile</Link>
@@ -32,7 +35,25 @@ export default function Navbar() {
                 </li>
               </>
             )}
+
+            {token && role === "employer" && (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/employer/jobs">My Jobs</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/employer/company">Company Profile</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/employer/jobs/new">Post Job</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/messages">Messages</Link>
+                </li>
+              </>
+            )}
           </ul>
+
           {token ? (
             <button className="btn btn-outline-danger" onClick={handleLogout}>Logout</button>
           ) : (
