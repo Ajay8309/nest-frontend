@@ -110,6 +110,15 @@ export default function Navbar() {
                       Messages
                     </button>
                   </li>
+                  <li className="nav-item">
+                    <button 
+                      onClick={() => handleNavClick("/people")}
+                      className="nav-link btn btn-link text-decoration-none d-flex align-items-center"
+                    >
+                       <Users size={16} className="me-1" />
+                      People
+                    </button>
+                  </li>
                 </>
               )}
 
@@ -158,6 +167,16 @@ export default function Navbar() {
                     >
                       <MessageSquare size={16} className="me-1" />
                       Messages
+                    </button>
+                  </li>
+
+                  <li className="nav-item">
+                    <button 
+                      onClick={() => handleNavClick("/people")}
+                      className="nav-link btn btn-link text-decoration-none d-flex align-items-center"
+                    >
+                      <Users size={16} className="me-1" />
+                      People
                     </button>
                   </li>
                 </>

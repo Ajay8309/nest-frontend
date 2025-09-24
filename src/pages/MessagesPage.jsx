@@ -14,6 +14,9 @@ export default function MessagesPage() {
     }, []);
 
     // console.log(selectedUser);
+    connections.map((c) => {
+      console.log(c);
+    })
 
     return (
         <div className="container-fluid vh-100">
