@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import api from "../api";
 import { useSocket } from "../context/SocketContext";
 
@@ -8,15 +8,19 @@ export default function Chat({ otherUserId, otherUserName, otherUserAvatar }) {
   const socket = useSocket();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const currentUserId = currentUser._id;
+  const messagesEndRef = useRef(null);
 
+  // Fetch chat history
   useEffect(() => {
     if (otherUserId) {
       api.get(`/messages/${otherUserId}`).then((res) => setMessages(res.data));
     }
   }, [otherUserId]);
 
+  // Listen for incoming messages
   useEffect(() => {
     if (!socket) return;
+
     const handleMessageReceived = (msg) => {
       if (
         (msg.from === otherUserId && msg.to === currentUserId) ||
@@ -33,18 +37,24 @@ export default function Chat({ otherUserId, otherUserName, otherUserAvatar }) {
                 )
             );
             return [...filtered, msg];
-          } else {
-            return [...prev, msg];
           }
+          return [...prev, msg];
         });
       }
     };
+
     socket.on("message:received", handleMessageReceived);
     return () => socket.off("message:received", handleMessageReceived);
   }, [socket, otherUserId, currentUserId]);
 
+  // Auto-scroll to the bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const sendMessage = () => {
     if (!text.trim() || !socket) return;
+
     socket.emit("message:send", { toUserId: otherUserId, text });
     setMessages((prev) => [
       ...prev,
@@ -182,34 +192,39 @@ export default function Chat({ otherUserId, otherUserName, otherUserAvatar }) {
         </div>
 
         <div className="chat-body">
-          {messages.map((m, i) => {
-            const isMe = m.from === currentUserId;
-            return (
-              <div
-                key={m._id || `temp-${i}`}
-                className={`msg-row ${isMe ? "outgoing" : "incoming"}`}
-              >
-                {!isMe && (
-                  <div className="avatar">
-                    {otherUserAvatar ? (
-                      <img
-                        src={otherUserAvatar}
-                        alt=""
-                        className="img-fluid"
-                        style={{ width: "36px", height: "36px" }}
-                      />
-                    ) : (
-                      <i className="bi bi-person fs-6 text-secondary"></i>
-                    )}
+          {messages.length > 0 ? (
+            messages.map((m, i) => {
+              const isMe = m.from === currentUserId;
+              return (
+                <div
+                  key={m._id || `temp-${i}`}
+                  className={`msg-row ${isMe ? "outgoing" : "incoming"}`}
+                >
+                  {!isMe && (
+                    <div className="avatar">
+                      {otherUserAvatar ? (
+                        <img
+                          src={otherUserAvatar}
+                          alt=""
+                          className="img-fluid"
+                          style={{ width: "36px", height: "36px" }}
+                        />
+                      ) : (
+                        <i className="bi bi-person fs-6 text-secondary"></i>
+                      )}
+                    </div>
+                  )}
+                  <div className={`bubble ${isMe ? "bubble-out" : "bubble-in"}`}>
+                    {m.text}
+                    <span className="timestamp">{formatTime(m.createdAt)}</span>
                   </div>
-                )}
-                <div className={`bubble ${isMe ? "bubble-out" : "bubble-in"}`}>
-                  {m.text}
-                  <span className="timestamp">{formatTime(m.createdAt)}</span>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="text-center text-muted">Start a conversation!</div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
         <div className="chat-footer">

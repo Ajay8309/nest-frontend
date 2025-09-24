@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { 
-  User, Mail, Target, Brain, FileText, Upload, Edit, Save, Loader, CheckCircle,
-  Linkedin, Twitter, Facebook, Instagram, Download, Star, Award, ArrowRight
+  CheckCircle, Loader 
 } from "lucide-react";
-import api from "../api"; // replace with your actual API instance
+import api from "../api";
 
 export default function ProfilePage() {
   const [name, setName] = useState("");
@@ -13,15 +12,14 @@ export default function ProfilePage() {
   const [resume, setResume] = useState(null);
   const [coverLetter, setCoverLetter] = useState(null);
   const [socialLinks, setSocialLinks] = useState({ linkedin: "", twitter: "", facebook: "", instagram: "" });
-  
+  const [experience, setExperience] = useState([]);
+
   const [existingProfile, setExistingProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
   // Personality Assessment
   const [showAssessment, setShowAssessment] = useState(false);
-  const [assessmentComplete, setAssessmentComplete] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
 
@@ -95,16 +93,24 @@ export default function ProfilePage() {
     } else {
       const result = calculatePersonalityType();
       setPersonalityAssessment(`${result.type}: ${result.description}`);
-      setAssessmentComplete(true);
       setShowAssessment(false);
     }
   };
 
-  const arrayBufferToBase64 = (buffer) => {
-    let binary = "";
-    const bytes = new Uint8Array(buffer.data);
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-    return window.btoa(binary);
+  const handleAddExperience = () => {
+    setExperience([...experience, { companyName: "", role: "", years: "" }]);
+  };
+
+  const handleExperienceChange = (index, field, value) => {
+    const newExp = [...experience];
+    newExp[index][field] = value;
+    setExperience(newExp);
+  };
+
+  const handleRemoveExperience = (index) => {
+    const newExp = [...experience];
+    newExp.splice(index, 1);
+    setExperience(newExp);
   };
 
   useEffect(() => {
@@ -118,6 +124,7 @@ export default function ProfilePage() {
           setSkills(res.data.skills?.join(", ") || "");
           setPersonalityAssessment(res.data.personalityAssessment || "");
           setSocialLinks(res.data.socialLinks || { linkedin: "", twitter: "", facebook: "", instagram: "" });
+          setExperience(res.data.experience || []);
         }
       } catch {
         setExistingProfile(null);
@@ -139,6 +146,7 @@ export default function ProfilePage() {
     formData.append("skills", skills);
     formData.append("personalityAssessment", personalityAssessment);
     formData.append("socialLinks", JSON.stringify(socialLinks));
+    formData.append("experience", JSON.stringify(experience));
     if (resume) formData.append("resume", resume);
     if (coverLetter) formData.append("coverLetter", coverLetter);
 
@@ -158,7 +166,6 @@ export default function ProfilePage() {
     </div>
   );
 
-  // Personality Assessment Modal
   if (showAssessment) return (
     <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
       <div className="card p-5 shadow-lg">
@@ -187,6 +194,7 @@ export default function ProfilePage() {
         <div className="row justify-content-center">
           <div className="col-lg-8">
             <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
+
               {/* Personal Info */}
               <div className="mb-4">
                 <label className="form-label fw-medium">Full Name *</label>
@@ -196,6 +204,22 @@ export default function ProfilePage() {
                 <label className="form-label fw-medium mt-3">Skills *</label>
                 <input className="form-control" value={skills} onChange={e => setSkills(e.target.value)} placeholder="e.g. JavaScript, React" required />
                 {skills && <div className="mt-2 d-flex flex-wrap gap-2">{skills.split(",").map((s,i)=><span key={i} className="badge bg-primary">{s.trim()}</span>)}</div>}
+              </div>
+
+              {/* Experience */}
+              <div className="mb-4">
+                <h5 className="fw-semibold">Experience</h5>
+                {experience.map((exp, i) => (
+                  <div key={i} className="border p-3 rounded mb-2">
+                    <div className="mb-2">
+                      <input className="form-control mb-1" placeholder="Company Name" value={exp.companyName} onChange={e => handleExperienceChange(i, "companyName", e.target.value)} />
+                      <input className="form-control mb-1" placeholder="Role" value={exp.role} onChange={e => handleExperienceChange(i, "role", e.target.value)} />
+                      <input className="form-control" placeholder="Years of Experience" value={exp.years} onChange={e => handleExperienceChange(i, "years", e.target.value)} />
+                    </div>
+                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveExperience(i)}>Remove</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-sm btn-outline-primary" onClick={handleAddExperience}>Add Experience</button>
               </div>
 
               {/* Personality Assessment */}
