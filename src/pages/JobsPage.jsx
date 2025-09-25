@@ -1,21 +1,25 @@
 // src/pages/JobsPage.js
 import React, { useEffect, useState } from "react";
 import api from "../api";
-import { Link } from "react-router-dom";
-// import api from "../api";
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
+  const [userSkills, setUserSkills] = useState([]); // NEW
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
 
   useEffect(() => {
-    const fetchJobs = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get("/jobs");
-        const data = res.data?.jobs || res.data;
+        // 1. Fetch user profile to get skills
+        const profileRes = await api.get("/profiles/me");
+        const skills = profileRes.data?.skills || [];
+        setUserSkills(skills);
+
+        // 2. Fetch jobs
+        const jobsRes = await api.get("/jobs");
+        const data = jobsRes.data?.jobs || jobsRes.data;
         if (Array.isArray(data)) {
           setJobs(data);
         } else {
@@ -28,8 +32,11 @@ export default function JobsPage() {
         setLoading(false);
       }
     };
-    fetchJobs();
+
+    fetchData();
   }, []);
+
+  console.log(jobs);
 
   const formatSalary = (salaryRange) => {
     if (!salaryRange) return "Salary not specified";
@@ -42,18 +49,34 @@ export default function JobsPage() {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return "1 day ago";
     if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} week${Math.ceil(diffDays / 7) > 1 ? 's' : ''} ago`;
+    if (diffDays < 30)
+      return `${Math.ceil(diffDays / 7)} week${
+        Math.ceil(diffDays / 7) > 1 ? "s" : ""
+      } ago`;
     return date.toLocaleDateString();
   };
 
-  const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+  // Filter jobs: matches search AND user skills
+  const filteredJobs = jobs.filter((job) => {
+    const matchesSearch =
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Check skill match
+    const hasSkillMatch =
+      userSkills.length === 0 ||
+      (job.skillsRequired &&
+        job.skillsRequired.some((skill) =>
+          userSkills.some(
+            (us) => us.toLowerCase().trim() === skill.toLowerCase().trim()
+          )
+        ));
+
+    return matchesSearch && hasSkillMatch;
   });
 
   if (loading) {
@@ -74,7 +97,10 @@ export default function JobsPage() {
       <div className="bg-gradient-primary min-vh-100 vw-100 d-flex align-items-center justify-content-center text-white">
         <div className="text-center">
           <h4>{error}</h4>
-          <button className="btn btn-outline-light mt-3" onClick={() => window.location.reload()}>
+          <button
+            className="btn btn-outline-light mt-3"
+            onClick={() => window.location.reload()}
+          >
             Try Again
           </button>
         </div>
@@ -88,6 +114,7 @@ export default function JobsPage() {
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
         rel="stylesheet"
       />
+      {/* include your style tags here … (from your previous version) */}
       <style>{`
         * {
           margin: 0;
@@ -328,18 +355,13 @@ export default function JobsPage() {
       `}</style>
 
       <div className="bg-gradient-primary floating-elements mainContainer">
-        <div className="container-fluid px-4 py-5" >
-          
-          {/* Header Section */}
+        <div className="container-fluid px-4 py-5">
+          {/* Header */}
           <div className="header-glass animate-fade-in-up mb-5">
-            <h1 className="display-4 fw-bold text-white mb-3">
-              🚀 Discover Your Dream Job
-            </h1>
+            <h1 className="display-4 fw-bold text-white mb-3">🚀 Discover Your Dream Job</h1>
             <p className="lead text-white opacity-90 mb-4">
-              Explore thousands of opportunities from top companies worldwide
+              Explore opportunities from top companies worldwide
             </p>
-            
-            {/* Stats */}
             <div className="row g-3 mb-4">
               <div className="col-md-4">
                 <div className="stats-card">
@@ -349,20 +371,14 @@ export default function JobsPage() {
               </div>
               <div className="col-md-4">
                 <div className="stats-card">
-                  <h3 className="fw-bold mb-1">500+</h3>
-                  <small>Companies</small>
-                </div>
-              </div>
-              <div className="col-md-4">
-                <div className="stats-card">
-                  <h3 className="fw-bold mb-1">10k+</h3>
-                  <small>Success Stories</small>
+                  <h3 className="fw-bold mb-1">{userSkills.length}</h3>
+                  <small>Your Skills</small>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Search and Filter Section */}
+          {/* Search */}
           <div className="search-container animate-slide-in-left">
             <div className="row g-3">
               <div className="col-md-8">
@@ -375,7 +391,7 @@ export default function JobsPage() {
                 />
               </div>
               <div className="col-md-4">
-                <button 
+                <button
                   className="btn btn-outline-glass w-100"
                   onClick={() => setSearchTerm("")}
                 >
@@ -385,89 +401,47 @@ export default function JobsPage() {
             </div>
           </div>
 
-          {/* Jobs Results */}
+          {/* Count */}
           <div className="mb-4">
             <h5 className="text-white opacity-90">
-              {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found
+              {filteredJobs.length} job{filteredJobs.length !== 1 ? "s" : ""}{" "}
+              {userSkills.length > 0 && "matching your skills"} found
             </h5>
           </div>
 
-          {/* No Jobs Message */}
-          {filteredJobs.length === 0 && (
-            <div className="text-center py-5">
-              <div className="card-glass p-5">
-                <h4 className="text-muted mb-3">No jobs found</h4>
-                <p className="text-muted">Try adjusting your search criteria</p>
-                <button 
-                  className="btn btn-gradient"
-                  onClick={() => setSearchTerm("")}
-                >
-                  Clear Search
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Jobs Grid */}
+          {/* Jobs */}
           <div className="row g-4">
-            {filteredJobs.map((job, index) => (
-              <div key={job._id} className="col-lg-6" style={{ animationDelay: `${index * 0.1}s` }}>
+            {filteredJobs.map((job) => (
+              <div key={job._id} className="col-lg-6">
                 <div className="card card-glass h-100 animate-fade-in-up">
                   <div className="card-body p-4">
-                    
-                    {/* Company Badge */}
                     <div className="d-flex justify-content-between align-items-start mb-3">
                       <span className="company-badge">{job.company}</span>
                       <small className="text-muted">{formatDate(job.createdAt)}</small>
                     </div>
-
-                    {/* Job Title */}
                     <h4 className="card-title text-dark fw-bold mb-3">{job.title}</h4>
-
-                    {/* Job Details */}
-                    <div className="row g-2 mb-3">
-                      <div className="col-sm-12">
-                        <div className="d-flex align-items-center text-muted mb-2">
-                          <svg width="16" height="16" fill="currentColor" className="bi bi-cash me-2" viewBox="0 0 16 16">
-                            <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
-                            <path d="M0 4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V4zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V6a2 2 0 0 1-2-2H3z"/>
-                          </svg>
-                          <small>{formatSalary(job.salaryRange)}</small>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Job Description */}
-                    <p className="card-text text-dark mb-3 lh-sm">
-                      {job.description}
-                    </p>
-
-                    {/* Skills Required Tags */}
+                    <p className="card-text text-dark mb-3 lh-sm">{job.description}</p>
                     <div className="mb-4">
-                      <small className="text-muted fw-semibold d-block mb-2">Skills Required:</small>
-                      {job.skillsRequired && job.skillsRequired.map((skill, idx) => (
-                        <span key={idx} className="job-tag me-1 mb-1">
-                          {skill}
-                        </span>
-                      ))}
+                      <small className="text-muted fw-semibold d-block mb-2">
+                        Skills Required:
+                      </small>
+                      {job.skillsRequired &&
+                        job.skillsRequired.map((skill, idx) => (
+                          <span key={idx} className="job-tag me-1 mb-1">
+                            {skill}
+                          </span>
+                        ))}
                     </div>
-
-                    {/* Action Buttons */}
                     <div className="d-flex gap-2 mt-auto">
-                      <button 
+                      <button
                         className="btn btn-gradient flex-fill"
-                        onClick={() => window.location.href = `/jobs/${job._id}/apply`}
+                        onClick={() =>
+                          (window.location.href = `/jobs/${job._id}/apply`)
+                        }
                       >
-                        <svg width="16" height="16" fill="currentColor" className="bi bi-send me-2" viewBox="0 0 16 16">
-                          <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z"/>
-                        </svg>
                         Apply Now
                       </button>
-                      <button className="btn btn-outline-secondary">
-                        <svg width="16" height="16" fill="currentColor" className="bi bi-bookmark" viewBox="0 0 16 16">
-                          <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
-                        </svg>
-                      </button>
+                      <button className="btn btn-outline-secondary">Save</button>
                     </div>
                   </div>
                 </div>
@@ -475,12 +449,18 @@ export default function JobsPage() {
             ))}
           </div>
 
-          {/* Load More Button */}
-          {filteredJobs.length > 0 && (
-            <div className="text-center mt-5">
-              <button className="btn btn-outline-glass btn-lg px-5">
-                Load More Jobs
-              </button>
+          {filteredJobs.length === 0 && (
+            <div className="text-center py-5">
+              <div className="card-glass p-5">
+                <h4 className="text-muted mb-3">No jobs found</h4>
+                <p className="text-muted">Try adjusting your search criteria</p>
+                <button
+                  className="btn btn-gradient"
+                  onClick={() => setSearchTerm("")}
+                >
+                  Clear Search
+                </button>
+              </div>
             </div>
           )}
         </div>
